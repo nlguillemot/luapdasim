@@ -86,7 +86,7 @@ local function _transitionToString (transition)
     return '((' .. transition[1][1] .. ',' .. in1 .. ',' .. st1 .. '),(' .. transition[2][1] .. ',' .. st2 .. '))'
 end
 
-function M.NewAcceptor (Q, Sigma, Gamma, delta, q0, Z, F)
+function M.NewAcceptor (delta, q0, Z, F)
     return function (originalInput)
         -- build a set out of the final state array, for convenience.
         local finalStateSet = _arrayToSet(F)

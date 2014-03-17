@@ -1,8 +1,5 @@
 local pdasim = require "pdasim"
 
-Q = { 's', 't', 'u', 'v' }
-Sigma = { '0', '1' }
-Gamma = { '0', '1' }
 delta = {
     { { 's', '0', ''  }, { 's', '0' } },
     { { 's', '1', ''  }, { 's', '1' } },
@@ -20,7 +17,7 @@ q0 = 's'
 Z = ''
 F = { 'v' }
 
-acceptor = pdasim.NewAcceptor(Q, Sigma, Gamma, delta, q0, Z, F)
+acceptor = pdasim.NewAcceptor(delta, q0, Z, F)
 
 tests = { '', '00', '11', '01', '010', '0110' }
 
