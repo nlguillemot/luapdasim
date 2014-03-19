@@ -4,25 +4,6 @@ local _debugLevel = 0
 
 local _epsilon = 'ε'
 
-local function _arrayToSet (a)
-    local s = { }
-    for k,v in ipairs(a) do
-        s[v] = true
-    end
-    return s
-end
-
-local function _setIterator (s)
-    local key = nil
-    return function ()
-        repeat
-            local k,v = next(s, key)
-            key = k
-        until key == nil or v
-        return key
-    end
-end
-
 local function _insertConfigurationToSet (configSet, state, remainingInput, stack)
     local key = state .. '\0' .. remainingInput .. '\0' .. stack
     configSet[key] = {
@@ -42,37 +23,6 @@ local function _configurationSetHasAnAcceptedConfiguration (configSet, finalStat
     return false
 end
 
-local function _areTwoConfigurationSetsEquivalent (config1, config2)
-    local config1keys = { }
-    for configKey,_ in pairs(config1) do
-        config1keys[#config1keys + 1] = configKey
-    end
-
-    local config2keys = { }
-    for configKey,_ in pairs(config2) do
-        config2keys[#config2keys + 1] = configKey
-    end
-
-    -- they can only be the same if they have the same length
-    if #config1keys == #config2keys then
-        table.sort(config1keys)
-        table.sort(config2keys)
-        local allTheSame = true
-        for i = 1, #config1keys do
-            if config1keys[i] ~= config2keys[i] then
-                allTheSame = false
-                break
-            end
-        end
-
-        if allTheSame then
-            return true
-        end
-    end
-
-    return false
-end
-
 local function _configurationToString (config)
     local input = config.remainingInput ~= '' and config.remainingInput or _epsilon
     local stack = config.stack ~= '' and config.stack or _epsilon
@@ -87,19 +37,28 @@ local function _transitionToString (transition)
 end
 
 function M.NewAcceptor (delta, q0, Z, F)
-    return function (originalInput)
+    return function (originalInput, maxSteps)
+        maxSteps = maxSteps or 999
+
         -- build a set out of the final state array, for convenience.
-        local finalStateSet = _arrayToSet(F)
+        local finalStateSet = { }
+        for _,v in ipairs(F) do
+            finalStateSet[v] = true
+        end
 
         -- keep track of all the current configurations (since PDAs are non-deterministic)
         -- this set begins with only the initial state in it.
         local currentConfigurationSet = { }
         _insertConfigurationToSet(currentConfigurationSet, q0, originalInput, Z)
 
-        local pastConfigurationSets = { }
+        local numSteps = 0
 
         -- if any possible configuration is in a final state with no more input or stack, then the computation is accepted.
         while not _configurationSetHasAnAcceptedConfiguration(currentConfigurationSet, finalStateSet) do
+            if numSteps > maxSteps then
+                return false, "Computation not accepted within " .. maxSteps .. " steps"
+            end
+
             -- must find the set of configurations possible after 1 more step
             local nextConfigurationSet = { }
             for _,config in pairs(currentConfigurationSet) do
@@ -138,20 +97,12 @@ function M.NewAcceptor (delta, q0, Z, F)
                 end
             end
 
-            pastConfigurationSets[#pastConfigurationSets + 1] = currentConfigurationSet
-
-            -- check if we're stuck in a loop of seeing the same configurations
-            for _,configurationSet in ipairs(pastConfigurationSets) do
-                if _areTwoConfigurationSetsEquivalent(configurationSet, nextConfigurationSet) then
-                    return false
-                end
-            end
-
             currentConfigurationSet = nextConfigurationSet
+            numSteps = numSteps + 1
         end
 
         -- computation was accepted
-        return true
+        return true, "Computation accepted after " .. numSteps .. " steps"
     end
 end
 
